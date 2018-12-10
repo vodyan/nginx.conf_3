@@ -1,0 +1,122 @@
+# FUNCTION TO EXTRACT ARCHIVES WITH ONE WORD
+# ==========================================
+function extract {
+ if [ -z "$1" ]; then
+    # display usage if no parameters given
+    echo "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
+ else
+    if [ -f $1 ] ; then
+        # NAME=${1%.*}
+        # mkdir $NAME && cd $NAME
+        case $1 in
+          *.tar.bz2)   tar xvjf ../$1    ;;
+          *.tar.gz)    tar xvzf ../$1    ;;
+          *.tar.xz)    tar xvJf ../$1    ;;
+          *.lzma)      unlzma ../$1      ;;
+          *.bz2)       bunzip2 ../$1     ;;
+          *.rar)       unrar x -ad ../$1 ;;
+          *.gz)        gunzip ../$1      ;;
+          *.tar)       tar xvf ../$1     ;;
+          *.tbz2)      tar xvjf ../$1    ;;
+          *.tgz)       tar xvzf ../$1    ;;
+          *.zip)       unzip ../$1       ;;
+          *.Z)         uncompress ../$1  ;;
+          *.7z)        7z x ../$1        ;;
+          *.xz)        unxz ../$1        ;;
+          *.exe)       cabextract ../$1  ;;
+          *)           echo "extract: '$1' - unknown archive method" ;;
+        esac
+    else
+        echo "$1 - file does not exist"
+    fi
+fi
+}
+
+# CREATE PRIVATE BITBUCKET REPO
+# =============================
+function bitbucket_create_private {
+  if [ $1 ] ; then
+    curl --user ${BITBUCKET_USERNAME}:${BITBUCKET_SECRET} https://api.bitbucket.org/1.0/repositories --data name=$1 --data is_private='true'
+  fi
+}
+
+# CREATE NEW WEBPROJECT
+# =====================
+function cr_wp {
+  if [ $1 ] ; then
+    NAME=$1
+    PROJECT_PATH=${PWD}/${NAME}
+    mkdir ${PROJECT_PATH}
+    cd ${PROJECT_PATH}
+    git init
+    git pull git@bitbucket.org:mralexandernickel/scratch.git
+    git submodule init
+    git submodule update
+    cd src/lib/bootstrap && git checkout master && git pull origin master
+    cd src/lib/fontawesome && git checkout master && git pull origin master
+    cd ${PROJECT_PATH}
+    perl -pi -e "s/scratch/${NAME}/g" package.json
+    perl -pi -e "s/scratch/${NAME}/g" src/haml/index.haml
+    npm install grunt --save-dev
+    npm install grunt-contrib-haml --save-dev
+    npm install grunt-contrib-coffee --save-dev
+    npm install grunt-contrib-less --save-dev
+    npm install grunt-contrib-concat --save-dev
+    npm install grunt-contrib-copy --save-dev
+    npm install grunt-contrib-watch --save-dev
+    bitbucket_create_private ${NAME}
+    git remote add origin git@bitbucket.org:${BITBUCKET_USERNAME}/${NAME}.git
+    git add -A
+    git commit -m 'Initial Commit'
+    git push origin master
+  fi
+}
+
+# FUNCTION TO GENERATE RANDOM PASSWORDS
+# =====================================
+function genpw {
+  THE_PW=$(tr -cd -- "-._?\!+a-zA-Z0-9" < /dev/urandom | head -c 16)
+  echo "$(date) | $THE_PW" >> "$HOME/.genpw"
+  echo $THE_PW
+}
+
+# GET MYSQL DATABASE SIZES
+# ========================
+function mysql_sizes {
+  mysql -u root -p -e 'select table_schema "Database Name", sum(data_length + index_length)/1024/1024 "Database Size in MB" from information_schema.TABLES GROUP BY table_schema;'
+}
+
+# CREATE MYSQL DB, USER, PASSWORD FOR USER AND GRANT PRIVILEGES ON DB
+# ===================================================================
+function mysql_user_db {
+  if [ $1 ] ; then
+    NAME=$1
+    APPENV=$2
+    PW=$(genpw)
+    COMMAND="create database ${NAME}_${APPENV};create user $NAME;grant all on ${NAME}_${APPENV}.* to '$NAME'@'localhost' identified by '$PW';"
+    mysql -u root -p -e $COMMAND
+    echo $PW
+  fi
+}
+
+# START HTTP SERVER IN CURRENT DIRECTORY
+# ======================================
+function serve {
+  port="${1:-3000}"
+  ruby -r webrick -e "s = WEBrick::HTTPServer.new(:Port => $port, :DocumentRoot => Dir.pwd); trap('INT') { s.shutdown }; s.start"
+}
+
+# GENERATE MD5 HASH FROM STRING
+# =============================
+function md5 {
+  echo -n "$1" | md5sum
+}
+
+# SEARCH AND REPLACE IN FILE
+# ==========================
+function sarp {
+  SEARCHSTRING=$1
+  REPLACESTRING=$2
+  INPUTFILE=$3
+  perl -pi -e "s/$1/$2/g" $3
+}
