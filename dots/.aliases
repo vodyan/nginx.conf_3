@@ -1,0 +1,6 @@
+alias e='exit'
+alias l='ls -alF'
+alias m='mysql -u root -p"_"'
+alias c='clear'
+alias d='sudo mv *.sql /vagrant/data/'
+alias ns='sudo service nginx restart'
