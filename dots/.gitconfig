@@ -1,0 +1,12 @@
+[user]
+        name = Alexander Wodjanko
+        email = a.wodjanko@stamp-media.de
+[merge]
+        tool = nano
+[mergetool]
+        prompt = false
+        keepBackup = false
+[http]
+        postBuffer = 1048576000
+[core]
+        compression = 9
